@@ -34,12 +34,12 @@ void PID_CalcIn(PID *pid, float reference, float feedback) {
   pid->integral += pid->error * pid->ki;
   //积分限幅
   if (pid->integral > pid->maxIntegral) pid->integral = pid->maxIntegral;
-  else if (pid->integral < -pid->maxIntegral) pid->integral = -pid->maxIntegral;
+  else if (pid->integral < 0) pid->integral = 0;
   //计算输出
   pid->output = pout + dout + pid->integral;
   //输出限幅
   if (pid->output > pid->maxOutput) pid->output = pid->maxOutput;
-  else if (pid->output < -pid->maxOutput) pid->output = -pid->maxOutput;
+  else if (pid->output < 0) pid->output = 0;
 }
 
 void PID_CalcOut(PID *pid, float reference, float feedback) {
@@ -72,3 +72,24 @@ void PID_CascadeCalc(CascadePID *pid, float outerRef, float outerFdb, float inne
 }
 
 CascadePID mypid;  //创建串级PID结构体变量
+
+void PID_CalcVDiff(PID *pid, float reference, float feedback) {//根据小车方向偏移量计算差速
+  //更新数据
+  pid->lastError = pid->error;         //将旧error存起来
+  pid->error = reference - feedback;  //计算新error
+  //计算微分
+  float dout=(pid->error-pid->lastError)*pid->kd;
+  //float dout = feedback2 * pid->kd;
+  //计算比例
+  float pout = pid->error * pid->kp;
+  //计算积分
+  pid->integral += pid->error * pid->ki;
+  //积分限幅
+  if (pid->integral > pid->maxIntegral) pid->integral = pid->maxIntegral;
+  else if (pid->integral < -pid->maxIntegral) pid->integral = -pid->maxIntegral;
+  //计算输出
+  pid->output = pout + dout + pid->integral;
+  //输出限幅
+  if (pid->output > pid->maxOutput) pid->output = pid->maxOutput;
+  else if (pid->output < -pid->maxOutput) pid->output = -pid->maxOutput;
+}

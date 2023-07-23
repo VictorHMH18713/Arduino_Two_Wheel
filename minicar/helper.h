@@ -8,6 +8,7 @@ uint8_t index1[] = {0x00, 0x00, 0x00, 0x00};
 uint8_t index2[] = {0x00, 0x00, 0x00, 0x00};
 uint8_t index3[] = {0x00, 0x00, 0x00, 0x00};
 uint8_t sum;
+uint8_t buffer[23];
 
 
 
@@ -38,18 +39,36 @@ void helper(uint8_t channel, uint8_t l, uint8_t flag, uint8_t i1, uint8_t i2, ui
   uint8_t su[] = {sum};
   // if(isr == 1){
     // isr = 0;
-    Serial.write(head, sizeof(head));
-    Serial.write(chan, sizeof(chan));
-    Serial.write(length, sizeof(length));
-    Serial.write(fl, sizeof(fl));
-    if(l == 0x0f || l == 0x17){
-      Serial.write(index1, sizeof(index1));
+    // Serial.write(head, sizeof(head));
+    // Serial.write(chan, sizeof(chan));
+    // Serial.write(length, sizeof(length));
+    // Serial.write(fl, sizeof(fl));
+  for(int k = 0; k < 4; k++){
+    buffer[k] = head[k];
+  }
+  buffer[4] = chan[0];
+  for(int k = 0; k < 4; k++){
+    buffer[k + 5] = length[k];
+  }
+  buffer[9] = fl[0];
+  if(l == 0x0f || l == 0x17){
+    // Serial.write(index1, sizeof(index1));
+    for(int k = 0; k < 4; k++){
+    buffer[k + 10] = index1[k];
     }
-    if(l == 0x17){
-      Serial.write(index2, sizeof(index2));
-      Serial.write(index3, sizeof(index3));
-    }
-    Serial.write(su, sizeof(su));
+  }
+  if(l == 0x17){
+    // Serial.write(index2, sizeof(index2));
+    // Serial.write(index3, sizeof(index3));
+    for(int k = 14; k < 4; k++){
+    buffer[k + 5] = index2[k];
+  }
+    for(int k = 18; k < 4; k++){
+    buffer[k + 5] = index3[k];
+  }
+  }
+  // Serial.write(su, sizeof(su));
+  buffer[l-1] = su[0];
   
 
 }
