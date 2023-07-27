@@ -1,0 +1,11 @@
+head:0xBA
+
+status:
+0x01 -> go_straight
+0x00-> stop
+0x02->turn_left
+0x03->turn_right
+0x05->stop
+
+delta:(only flag==01)
+大端发送两个字节
