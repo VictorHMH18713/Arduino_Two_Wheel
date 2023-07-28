@@ -9,12 +9,12 @@
 int pwm_a = 100, pwm_b = 100; // pwm_a控制左边电机占空比，pwm_b控制右边电机占空比
 
 int numdata = 0;
-PID speedPIDR;
 PID speedPIDL;
+PID speedPIDR;
 PID V_diff_PID; // 差速 pid
 
-float reference_speedr = 6.3;
-float reference_speedl = 8; // 左边测速是右边的4/3
+float reference_speedl = 6.3; // 6.3
+float reference_speedr = 8;   // 右边测速是左边的4/3     8
 
 float bias; // 由摄像头得到的方向偏移量
 float data_str;
@@ -33,6 +33,7 @@ void setup()
   move_setup();
   speed_setup(12); // 设置定时器时长（需要与后面的保持一致）
   Serial.begin(115200);
+  setAnalog();                       // 开启模拟输入GPIO
   float kpl, kil, kdl, maxI, maxOut; // 左轮速度pid系数
   kpl = 15;
   kil = 0.15;
@@ -49,10 +50,12 @@ void setup()
   kd_vd = 5;
   maxI_vd = 0;
   maxOut_vd = 10;
+  // maxOut_vd = 50;
   setupPID(&speedPIDR, kpr, kir, kdr, maxI, maxOut); // void setupPID(PID *pid, float p, float i, float d, float maxI, float maxOut) {
   setupPID(&speedPIDL, kpl, kil, kdl, maxI, maxOut);
   setupPID(&V_diff_PID, kp_vd, ki_vd, kd_vd, maxI_vd, maxOut_vd);
   init_ctr();
+
   // helper(0x01, 0x0b, 0x04, 0x00, 0x00, 0x00);  //pid调试助手启动
   // Serial.write(buffer, sizeof(uint8_t)*0x0b);
   // helper(0x02,0x0b,0x04,0x00,0x00,0x00);
@@ -61,43 +64,63 @@ void setup()
 
 void loop()
 {
-  // put your main code here, to run repeatedly:
+  // put your main code here, to run repeatedly :
 
-  if (Serial.available() > 0)
-  {
-    delay(10);
-    data1 = Serial.read();
-    data2 = Serial.read();
-    // for(int i=0;i<10;i++){
-    // if (buffer1[i] == 0xAB && buffer1[i+1] == 0xBA) {
-    //   flag = i+1;
-    //   Serial.println(flag);
-    // }
-    // 从M2D摄像头获取指令及偏移量
-    if (data1 == 0xAB && data2 == 0xBA)
-    {
-      status = Serial.read();
-      minus = Serial.read();
-      delta1 = Serial.read();
-      delta2 = Serial.read();
-      if (minus == 0x00)
-      {
-        bias = delta1 * 256 + delta2;
-      }
-      if (minus == 0x01)
-      {
-        bias = -(delta1 * 256 + delta2);
-      }
-      Serial.print(status);
-      Serial.println(bias);
-    }
-  }
+  //     if (Serial.available() > 0)
+  // {
+  //   delay(10);
+  //   data1 = Serial.read();
+  //   data2 = Serial.read();
+  //   for (int i = 0; i < 10; i++)
+  //   {
+  //     if (buffer1[i] == 0xAB && buffer1[i + 1] == 0xBA)
+  //     {
+  //       flag = i + 1;
+  //       Serial.println(flag);
+  //     }
+
+  //     // 从M2D摄像头获取指令及偏移量
+  //     if (data1 == 0xAB && data2 == 0xBA)
+  //     {
+  //       status = Serial.read();
+  //       minus = Serial.read();
+  //       delta1 = Serial.read();
+  //       delta2 = Serial.read();
+  //       if (minus == 0x00)
+  //       {
+  //         bias = delta1 * 256 + delta2;
+  //       }
+  //       if (minus == 0x01)
+  //       {
+  //         bias = -(delta1 * 256 + delta2);
+  //       }
+  //       Serial.print(status);
+  //       Serial.println(bias);
+  //     }
+  //   }
+
   // 改进：由灰度传感器获得偏移量
   bias = read_bias_from_gray();
-  // Serial.println(gray2);
+  // Serial.println(bias);
+  car_control(1);
+  Serial.println(speed_diff);
+  Serial.println(gray2);
+  Serial.println(gray3);
+  Serial.println(gray4);
+  Serial.println(gray5);
+  Serial.println(gray6);
+  Serial.println(gray7);
+
   delay(10);
-  car_control(status);
 }
+
+// void loop()
+// {
+//   setAnalog();
+//   readGrayscale();
+//   Serial.println(gray2);
+//   delay(10);
+// }
 
 void car_control(int status_input)
 {                        // 控制小车运动， 如停止、前进、掉头等
@@ -192,14 +215,6 @@ void car_control(int status_input)
   }
 }
 
-// void loop()
-// {
-//   setAnalog();
-//   readGrayscale();
-//   Serial.println(gray2);
-//   delay(10);
-// }
-
 void go_straight() // 含有pid的直线行走
 {
   // if (Serial.available() > 0 && flag_status_change == 1) // 状态改变了，需要读缓冲区中的用字符串发送的数字
@@ -222,8 +237,8 @@ void go_straight() // 含有pid的直线行走
   //   refenrence_speedr=0;
   // else
   //   ren
-  PID_CalcIn(&speedPIDR, reference_speedr - 0.08 * 0.75 * speed_diff, v_a); // PID_CalcIn(PID *pid, float reference, float feedback)
-  PID_CalcIn(&speedPIDL, reference_speedl + 0.08 * speed_diff, v_b);        // 左右加上或减去差速
+  PID_CalcIn(&speedPIDL, reference_speedl - 0.08 * 0.75 * speed_diff, v_a); // PID_CalcIn(PID *pid, float reference, float feedback)
+  PID_CalcIn(&speedPIDR, reference_speedr + 0.08 * speed_diff, v_b);        // 左右加上或减去差速
 
   // pwm_b=int(speedPID.output);
   //  vi = speed_loop();
@@ -241,8 +256,8 @@ void go_straight() // 含有pid的直线行走
   // helper(0x02, 0x0f, 0x02, uint8_t(v_b), 0x00, 0x00);
   // Serial.write(buffer, sizeof(uint8_t)*0x0f);
   // pid更新占空比
-  pwm_a = int(speedPIDR.output);
-  pwm_b = int(speedPIDL.output);
+  pwm_a = int(speedPIDL.output);
+  pwm_b = int(speedPIDR.output);
   // Serial.print(pwm_a);
   // Serial.println(pwm_b);
   delay(12);

@@ -1,6 +1,7 @@
 // 从六个模拟引脚读取灰度传感器返回的值
 
 int gray2, gray3, gray4, gray5, gray6, gray7; // 灰度传感器2号到7号传感器的测量结果
+float k1, k2, k3;                             // 传感器权重
 void setAnalog()
 {
     pinMode(A0, INPUT);
@@ -20,10 +21,16 @@ void readGrayscale() // 读数越高，画面越黑。 读数最高处为黑线�
     gray7 = analogRead(A5);
 }
 
-int gray2bias() // 由灰度传感器的读数得到一个线条的偏移量 返回值为负数表示向左偏，为正数表示向右偏
+float gray2bias() // 由灰度传感器的读数得到一个线条的偏移量 返回值为负数表示向左偏，为正数表示向右偏
 {
-    int standard = 500;                          // 待调  standard代表白色  传感器读数减去standard
-    float factors[6] = {-1, -0.5, 0, 0, 0.5, 1}; // 待调 六个传感器读数的权重  越靠边的传感器权重越大
+    // 黑线和白色灰度值需实测
+    // 黑线：620
+    // 白色：200
+    int standard = 0; // 待调  standard代表白色  传感器读数减去standard
+    k1 = 0.8;
+    k2 = 0.4;
+    k3 = 0.2;
+    float factors[6] = {-k1, -k2, -k3, k3, k2, k1}; // 待调 六个传感器读数的权重  越靠边的传感器权重越大
     // 计算偏移量
     int gray_bias = factors[0] * (gray2 - standard) + factors[1] * (gray3 - standard) + factors[2] * (gray4 - standard) + factors[3] * (gray5 - standard) + factors[4] * (gray6 - standard) + factors[5] * (gray7 - standard);
     return gray_bias; //   setAnalog();
@@ -32,11 +39,10 @@ int gray2bias() // 由灰度传感器的读数得到一个线条的偏移量 返
     //   delay(10);
 }
 
-int read_bias_from_gray()
+float read_bias_from_gray()
 {
-    int a;
-    setAnalog();
-    readGrayscale;
+    float a;
+    readGrayscale();
     a = gray2bias();
     return a;
 }
